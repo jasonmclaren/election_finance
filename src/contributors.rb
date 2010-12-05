@@ -35,9 +35,11 @@ end
 
 # takes a csv file from the contribution scraper and a code block
 # yields the row_number, client_number, and full_name
+# TODO rewrite to skip first row rather than checking each row for "Row"
 def all_contributors(contributions_filename, &block)
   CSV.open(contributions_filename, 'r') do |row|
     row_num, client_num, full_name = row[0], row[1], row[2]
+    next if row_num=="Row" # skip first row -- fixme
     yield row_num, client_num, full_name
   end
 end
@@ -57,5 +59,13 @@ def fetch_all_contributors(contributions_filename)
     else
       puts line
     end
+  end
+end
+
+if __FILE__ == $0
+  if ARGV.size != 1
+    puts "Usage: #{__FILE__} inputFile.csv"
+  else
+    fetch_all_contributors(ARGV[0])
   end
 end
