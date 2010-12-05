@@ -1,16 +1,30 @@
 require 'rubygems'
 require 'hpricot'
-require 'nokogiri'
 require 'pp'
-require 'open-uri'
-require 'read_contributors'
-require 'json'
+require 'cgi'
+require 'csv'
 
-def parse_tabular_page(doc)
-  rows = []
+def parse_tabular_page(doc, opts = {})
+  rows = block_given? ? nil : []
   table = doc.search("//table[@class='table_text']").first
-
-  table.search('//tr').each{|tr|
+  
+  trs = table.search('//tr')
+  header_row = trs.delete_at(0)
+  
+  row = ['Row', 'Client']
+  
+  composite_elements = []
+  
+  header_row.search('//td').each_with_index{|td, index|
+    element = td.inner_text
+    elements = element.split(/ *\/ */)
+    composite_elements[index] = elements.length
+    row = row + elements
+  }
+  
+  block_given? ? yield(row) : rows << row unless[:no_header]
+  
+  trs.each{|tr|
     row = []
     tds = tr.search('//td')
     url = nil
@@ -20,23 +34,36 @@ def parse_tabular_page(doc)
         js = a[:href]
         match = js.match(/'(contributor.aspx?[^']+)'/)
         unless match.nil? || (link = match[1]).nil? || link.empty?
-          #      http://elections.ca/scripts/webpep/fin2/contributor.aspx?type=1&client=15758&row=2566970&seqno=&part=2a&entity=1&lang=e&option=4&return=1
-          url = "http://elections.ca/scripts/webpep/fin2/#{link}"
-          #puts "grabbing #{url}"
-          contributor_info = parse_contributor_file(Hpricot(open(url)))
-          row << contributor_info.to_json
+          params = CGI::parse(link.split('?').last)
+          client_id = Integer(CGI::unescape(params['client'].to_s))
+          row_id    = Integer(CGI::unescape(params['row'].to_s))
+
+          row << row_id
+          row << client_id
         end
       end
     rescue => e
       STDERR.puts e.message
+      row << nil
+      row << nil
     end unless tds.first.inner_text.nil? || tds.first.inner_text.empty?
   
-    tds.each{|td|
-      row << td.inner_text
+    tds.each_with_index{|td, index|
+      element = td.inner_text
+      if composite_elements[index] > 1
+        elements = element.split(/ *\/ */)
+        if elements.length == composite_elements[index]
+          row = row + elements
+        elsif elements.length < composite_elements[index]
+          row = row + elements + Array.new(composite_elements[index] - elements.length, nil)
+        else
+          row = row + elements[0, composite_elements[index] - 1] + [elements[composite_elements[index]-1..-1].join(' / ')]
+        end
+      else
+        row << element
+      end
     }
-    #puts row.join(',')
-    rows << row
-    yield(row) if block_given?
+    block_given? ? yield(row) : rows << row
   }
   return rows
 end
@@ -49,5 +76,5 @@ if __FILE__ == $0
   doc = Hpricot(f)
   f.close
   
-  parse_tabular_page(doc){|row| puts row.join(",")}
+  parse_tabular_page(doc){|row| puts CSV.generate_line(row)}
 end
