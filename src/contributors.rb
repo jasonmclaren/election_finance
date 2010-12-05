@@ -65,6 +65,7 @@ if __FILE__ == $0
   if ARGV.size != 1
     puts "Usage: #{__FILE__} inputFile.csv"
   else
+    puts CSV.generate_line(["Row", "Client", "Full Name", "City", "Province", "Postal Code"])
     fetch_all_contributors(ARGV[0])
   end
 end
