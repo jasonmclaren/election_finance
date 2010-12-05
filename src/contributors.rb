@@ -34,11 +34,11 @@ def read_contributor_page(url)
 end
 
 # takes a csv file from the contribution scraper and a code block
-# yields the client_number, row_number, and full_name
+# yields the row_number, client_number, and full_name
 def all_contributors(contributions_filename, &block)
   CSV.open(contributions_filename, 'r') do |row|
     row_num, client_num, full_name = row[0], row[1], row[2]
-    yield client_num, row_num, full_name
+    yield row_num, client_num, full_name
   end
 end
 
@@ -50,7 +50,7 @@ end
 # writes (to stdout) a csv file of contributors in this format:
 # client_num, row_num, full_name, city, province, postal_code
 def fetch_all_contributors(contributions_filename)
-  all_contributors(contributions_filename) do |client_num, row_num, full_name|
+  all_contributors(contributions_filename) do |row_num, client_num, full_name|
     line = read_contributor_page(contributor_url(client_num, row_num))
     if line.nil?
       puts "nil"
