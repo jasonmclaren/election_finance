@@ -3,6 +3,8 @@ require 'hpricot'
 require 'pp'
 require 'cgi'
 require 'csv'
+require 'optparse'
+
 
 def parse_tabular_page(doc, opts = {})
   rows = block_given? ? nil : []
@@ -22,7 +24,7 @@ def parse_tabular_page(doc, opts = {})
     row = row + elements
   }
   
-  block_given? ? yield(row) : rows << row unless[:no_header]
+  block_given? ? yield(row) : rows << row unless opts[:no_header]
   
   trs.each{|tr|
     row = []
@@ -69,12 +71,56 @@ def parse_tabular_page(doc, opts = {})
 end
 
 if __FILE__ == $0
-  file_name = "../list_pages/detail_report1.aspx.html"
+  options = {}
+  options_parser = OptionParser.new do|opts|
+    # Set a banner, displayed at the top
+    # of the help screen.
+    opts.banner = "Usage: #{__FILE__} [options] file1 file2 ..."
 
-  raise "Can't open #{file_name}" unless File.exists?(file_name)
-  f = File.open(file_name)
-  doc = Hpricot(f)
-  f.close
+    # Define the options, and what they do
+    options[:'out-file'] = nil
+    opts.on( '-o', '--out-file FILE', 'File to send data to' ) do |file_name|
+     options[:'out-file'] = file_name
+    end
+
+    options[:header] = true
+    opts.on( '-h', '--[no-]header', 'Include the header on the csv' ) do |header|
+     options[:header] = header
+    end
+
+    # This displays the help screen, all programs are
+    # assumed to have this option.
+    opts.on( '-h', '--help', 'Display this screen' ) do
+     puts opts
+     exit
+    end
+  end
+
+  options_parser.parse!
   
-  parse_tabular_page(doc){|row| puts CSV.generate_line(row)}
+  first_file = true
+  
+  files = ARGV
+  files = [STDOUT] if files.empty?
+  
+  out_file = options[:'out-file'] ? File.open(options[:'out-file'], 'w') : STDOUT
+  
+  files.each{|file_name|
+    unless File.exists?(file_name)
+      STDERR.puts "Can't open #{file_name}. Skipping."
+      next
+    end
+
+    file = file_name.is_a?(String) ? File.open(file_name) : file_name
+    begin
+      doc = Hpricot(file)
+    ensure
+      file.close
+    end
+    
+    parse_tabular_page(doc, :no_header => !(first_file && options[:header])){|row|
+      out_file.puts CSV.generate_line(row)
+    }
+    first_file = false
+  }
 end
