@@ -6,10 +6,6 @@ require 'csv'
 
 OUTPUT_FILENAME = "../contributors.csv"
 
-# substitute a number like 2566970 for ROWNUM
-# substitute a number like 16204 for CLIENTNUM
-URL="http://elections.ca/scripts/webpep/fin2/contributor.aspx?type=1&client=CLIENTNUMrow=ROWNUM&seqno=&part=2a&entity=1&lang=e&option=4&return=2"
-
 # Scrape the actual individual contributor page
 # doc is an html string
 # returns a dict of full_name, city, province, postal_code
