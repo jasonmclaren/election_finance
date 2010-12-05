@@ -10,7 +10,7 @@ OUTPUT_FILENAME = "../contributors.csv"
 
 # Scrape the actual individual contributor page
 # doc is a Nokogiri XML doc
-# returns a dict of full_name, city, province, postal_code
+# returns a hash of full_name, city, province, postal_code
 def parse_contributor_xml(doc)
   full_name = doc.search("//span[@id='lblFullName']").inner_text
   city = doc.search("//span[@id='lblCity']").inner_text
@@ -21,16 +21,12 @@ def parse_contributor_xml(doc)
 end
 
 # takes a contributor web page url or local html filename
-# returns a line of csv, or nil if there is no contributor data in that page
+# returns a contributor hash from parse_contributor_xml,
+# or nil if there is no contributor data in that page
 def read_contributor_page(url)
   xml = open(url){|f| Hpricot(f)}
   contrib = parse_contributor_xml(xml)
-  if contrib.values.reject{|v| v==""}.empty?
-    return nil
-  else
-    CSV.generate_line([contrib[:full_name], contrib[:city], contrib[:province],
-                       contrib[:postal_code]])
-  end
+  contrib.values.reject{|v| v==""}.empty? ? nil : contrib
 end
 
 # takes a csv file from the contribution scraper and a code block
@@ -53,12 +49,15 @@ end
 # client_num, row_num, full_name, city, province, postal_code
 def fetch_all_contributors(contributions_filename)
   all_contributors(contributions_filename) do |row_num, client_num, full_name|
-    line = read_contributor_page(contributor_url(client_num, row_num))
-    if line.nil?
+    contrib = read_contributor_page(contributor_url(client_num, row_num))
+    if contrib.nil?
       puts "nil"
     else
-      puts line
+      puts CSV.generate_line([row_num, client_num, contrib[:full_name],
+                              contrib[:city], contrib[:province],
+                              contrib[:postal_code]])
     end
+    sleep 1
   end
 end
 
