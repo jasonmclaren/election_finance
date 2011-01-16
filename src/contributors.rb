@@ -46,7 +46,7 @@ end
 
 # takes a csv file of contributions (output of contributions.rb)
 # writes (to stdout) a csv file of contributors in this format:
-# client_num, row_num, full_name, city, province, postal_code
+# row_num, client_num, full_name, city, province, postal_code
 def fetch_all_contributors(contributions_filename)
   all_contributors(contributions_filename) do |row_num, client_num, full_name|
     contrib = read_contributor_page(contributor_url(client_num, row_num))
@@ -56,6 +56,7 @@ def fetch_all_contributors(contributions_filename)
       puts CSV.generate_line([row_num, client_num, contrib[:full_name],
                               contrib[:city], contrib[:province],
                               contrib[:postal_code]])
+      $stdout.flush
     end
     sleep 1
   end
