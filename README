@@ -1,1 +1,5 @@
 Experiments with Canadian electoral reform data.
+
+list_pages/ contains the web pages that you get by searching for all 2007 contributions in the contributions-to-candidates database, and hitting 'next' 76 times.  These contain rows with most of the contribution data, and links to the contributor pages.
+
+contributor_pages/ contains the web pages that you get by clicking on the contributor name for each of the 15,154 rows in the contributions-to-candidates database.  These contain the city, province, and postal code for each contributor.
